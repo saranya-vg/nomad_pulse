@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>NomadPulse</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --bg: #f0f2f5;
+            --accent: #22c55e;
+        }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); transition: background 0.5s; display: flex; justify-content: center; height: 100vh; margin: 0; }
+        .app { width: 440px; height: 95vh; background: white; border-radius: 24px; margin-top: 2.5vh; display: flex; flex-direction: column; box-shadow: 0 15px 40px rgba(0,0,0,0.1); overflow: hidden; }
+        .header { padding: 20px; font-weight: 800; border-bottom: 1px solid #eee; text-align: center; color: var(--primary); font-size: 22px; transition: color 0.5s; }
+        #chatBox { flex: 1; overflow-y: auto; padding: 20px; background: #f8fafc; display: flex; flex-direction: column; gap: 12px; }
+        .bubble { max-width: 85%; padding: 14px; border-radius: 18px; font-size: 14px; line-height: 1.5; }
+        .user { align-self: flex-end; background: var(--primary); color: white; transition: background 0.5s; }
+        .bot { align-self: flex-start; background: white; color: #1e293b; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .search-bar { display: flex; padding: 18px; gap: 10px; background: white; border-top: 1px solid #eee; }
+        input { flex: 1; padding: 12px; border-radius: 12px; border: 1px solid #ddd; outline: none; }
+        button#send { background: var(--accent); color: white; border: none; padding: 12px 20px; border-radius: 12px; font-weight: bold; cursor: pointer; transition: background 0.5s; }
+        .card { border-radius: 15px; border: 1px solid #e2e8f0; margin-top: 12px; overflow: hidden; background: white; }
+        .card img { width: 100%; height: 140px; object-fit: cover; }
+        .plan-btn { width: 100%; margin-top: 12px; background: var(--primary); color: white; border: none; padding: 14px; border-radius: 12px; font-weight: bold; cursor: pointer; transition: background 0.5s; }
+    </style>
+</head>
+<body>
+
+<div class="app">
+    <div class="header">NomadPulse ⚡</div>
+    <div id="chatBox"></div>
+    <div class="search-bar">
+        <input id="query" placeholder="Explore your vibe...">
+        <button id="send" onclick="search()">Go</button>
+    </div>
+</div>
+
+<script>
+let lastPlaces = [];
+let lastQuery = "";
+let chatHistory = [];
+
+const themes = {
+    nature: { primary: "#059669", bg: "#ecfdf5", accent: "#10b981" },
+    spiritual: { primary: "#7c3aed", bg: "#f5f3ff", accent: "#8b5cf6" },
+    night: { primary: "#1e1b4b", bg: "#1e293b", accent: "#3b82f6" },
+    default: { primary: "#2563eb", bg: "#f0f2f5", accent: "#22c55e" }
+};
+
+function setTheme(type) {
+    const t = themes[type] || themes.default;
+    document.documentElement.style.setProperty('--primary', t.primary);
+    document.documentElement.style.setProperty('--bg', t.bg);
+    document.documentElement.style.setProperty('--accent', t.accent);
+}
+
+async function search() {
+    const input = document.getElementById("query");
+    lastQuery = input.value.trim();
+    if (!lastQuery) return;
+
+    addBubble(lastQuery, 'user');
+
+    // ✅ ADD THIS (missing earlier)
+    chatHistory.push({ role: "user", content: lastQuery });
+
+    input.value = "";
+    const loader = addBubble("✨ Tuning into your vibe...", 'bot');
+
+    try {
+        const res = await fetch(`http://localhost:3000/search`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ q: lastQuery, history: chatHistory })
+        });
+
+        const result = await res.json();
+        loader.remove();
+
+        setTheme(result.theme);
+
+        if (result.type === "places") {
+            lastPlaces = result.data;
+
+            chatHistory.push({
+                role: "assistant",
+                content: `Found places: ${result.data.map(p => p.name).join(", ")}`
+            });
+
+            renderPlaces(result.data);
+        } else {
+            chatHistory.push({ role: "assistant", content: result.data });
+            addBubble(result.data, 'bot');
+        }
+
+    } catch (err) {
+        console.error(err);
+        loader.innerText = "⚠️ Server error. Check backend.";
+    }
+}
+
+function addBubble(text, type) {
+    const div = document.createElement("div");
+    div.className = `bubble ${type}`;
+    div.style.whiteSpace = "pre-wrap";
+    div.innerText = text;
+    document.getElementById("chatBox").appendChild(div);
+    chatBox.scrollTop = chatBox.scrollHeight;
+    return div;
+}
+
+function renderPlaces(places) {
+    const container = document.createElement("div");
+    container.className = "bubble bot";
+    container.style.background = "transparent";
+    container.style.padding = "0";
+
+    places.forEach(p => {
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = `
+            <img src="${p.image}">
+            <div style="padding:12px;">
+                <strong>${p.name}</strong><br>
+                <small>⭐ ${p.rating} • ${p.address}</small>
+            </div>`;
+        container.appendChild(card);
+    });
+
+    const btn = document.createElement("button");
+    btn.className = "plan-btn";
+    btn.innerText = "📅 Draft Itinerary";
+    btn.onclick = () => getPlan();
+    container.appendChild(btn);
+
+    document.getElementById("chatBox").appendChild(container);
+    chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+async function getPlan() {
+    const loader = addBubble("⏳ Building the pulse...", 'bot');
+    try {
+        const res = await fetch("http://localhost:3000/plan", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ places: lastPlaces, query: lastQuery })
+        });
+        const data = await res.json();
+        loader.remove();
+        addBubble(data.plan, 'bot');
+    } catch (err) { loader.innerText = "⚠️ Failed."; }
+}
+</script>
+</body>
+</html>
