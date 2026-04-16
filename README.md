@@ -2,6 +2,10 @@
 
 NomadPulse AI is a conversational web app that helps users discover nearby places (cafes, services, etc.) using natural language. It combines AI (OpenRouter) with Google Places API to deliver context-aware, location-biased results.
 
+Check out the youtube video here:
+
+> **[Watch the Demo on YouTube]([https://youtu.be/4sr02NGxJeQ](https://youtu.be/TUR57t7O0uo))**
+
 ---
 
 ## 📁 Project Structure
