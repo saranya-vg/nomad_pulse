@@ -4,7 +4,7 @@ NomadPulse AI is a conversational web app that helps users discover nearby place
 
 Check out the youtube video here:
 
-> **[Watch the Demo on YouTube]([https://youtu.be/4sr02NGxJeQ](https://youtu.be/TUR57t7O0uo))**
+> **[Watch the Demo on YouTube]([https://youtu.be/4sr02NGxJeQ](https://youtu.be/TUR57t7O0uo)**
 
 ---
 
